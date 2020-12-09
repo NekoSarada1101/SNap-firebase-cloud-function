@@ -7,6 +7,38 @@ admin.initializeApp(functions.config().firebase)
 // データベースの参照を作成
 const fireStore = admin.firestore()
 
+exports.sendMessage = functions.firestore
+  .document('users/{userID}/applicated_follows/{documentID}')
+  .onCreate((change, context) => {
+    console.log("STRAT:sendMessage");
+    const payload = {
+      notification: {
+        title: "SNap",
+        body:"フォロー申請されました！",
+        badge: "1",
+        sound: "default"
+      }
+    };
+
+    const option = {
+      priority: "high"
+    };
+    let userRef = fireStore.collection('users').doc(context.params.userID);
+    let getUser = userRef.get()
+      .then(doc => {
+        if (!doc.exists) {
+          console.log('No such document!');
+        } else {
+          admin.messaging().sendToDevice(doc.data()["fcm_token"], payload, option);
+          console.log('Document data:', doc.data());
+        }
+        return doc.data();
+      })
+      .catch(err => {
+        console.log('Error getting documents', err);
+      });
+  });
+
 exports.myFunction = functions.firestore
   .document('posts/{documentID}')
   .onWrite((change, context) => {
