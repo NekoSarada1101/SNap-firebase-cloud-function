@@ -7,16 +7,57 @@ admin.initializeApp(functions.config().firebase)
 // データベースの参照を作成
 const fireStore = admin.firestore()
 
+exports.goodNotification = functions.https.onCall((data, context) => {
+  console.log("STRAT:goodNotification");
+  console.log("to "+data.uid);
+  const payload = {
+    notification: {
+      title: "good",
+      body:"あなたの投稿がいいねされました！",
+      badge: "1",
+      sound: "default",
+      tag:data.postPath
+    }
+  };
+
+  const option = {
+    priority: "high"
+  };
+
+  let userRef = fireStore.collection('users').doc(data.uid);
+  return userRef.get()
+    .then(doc => {
+      if (!doc.exists) {
+        console.log('No such document!');
+      } else {
+        console.log("START:sendToDevice");
+        return admin.messaging().sendToDevice(doc.data()["fcm_token"], payload, option)
+        .then(() =>{
+            return console.log(doc.data()["fcm_token"]);
+        }).catch(err => {
+          console.log(err);
+        });
+      }
+      return doc.data();
+    })
+    .catch(err => {
+      console.log('Error getting documents', err);
+    });
+
+});
+
 exports.sendMessage = functions.firestore
   .document('users/{userID}/applicated_follows/{documentID}')
   .onCreate((change, context) => {
     console.log("STRAT:sendMessage");
+    console.log("to "+context.params.userID);
     const payload = {
       notification: {
-        title: "SNap",
+        title: "applicated_follow",
         body:"フォロー申請されました！",
         badge: "1",
-        sound: "default"
+        sound: "default",
+        tag:"applicated_follow"
       }
     };
 
@@ -24,13 +65,14 @@ exports.sendMessage = functions.firestore
       priority: "high"
     };
     let userRef = fireStore.collection('users').doc(context.params.userID);
-    let getUser = userRef.get()
+    return userRef.get()
       .then(doc => {
         if (!doc.exists) {
           console.log('No such document!');
         } else {
-          admin.messaging().sendToDevice(doc.data()["fcm_token"], payload, option);
-          console.log('Document data:', doc.data());
+          console.log("START:sendToDevice");
+          console.log(doc.data()["fcm_token"]);
+          return admin.messaging().sendToDevice(doc.data()["fcm_token"], payload, option);
         }
         return doc.data();
       })
