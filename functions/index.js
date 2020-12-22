@@ -9,14 +9,14 @@ const fireStore = admin.firestore()
 
 exports.goodNotification = functions.https.onCall((data, context) => {
   console.log("STRAT:goodNotification");
-  console.log("to "+data.uid);
+  console.log("to " + data.uid);
   const payload = {
     notification: {
       title: "good",
-      body:"あなたの投稿がいいねされました！",
+      body: "あなたの投稿がいいねされました！",
       badge: "1",
       sound: "default",
-      tag:data.postPath
+      tag: data.postPath
     }
   };
 
@@ -32,11 +32,11 @@ exports.goodNotification = functions.https.onCall((data, context) => {
       } else {
         console.log("START:sendToDevice");
         return admin.messaging().sendToDevice(doc.data()["fcm_token"], payload, option)
-        .then(() =>{
+          .then(() => {
             return console.log(doc.data()["fcm_token"]);
-        }).catch(err => {
-          console.log(err);
-        });
+          }).catch(err => {
+            console.log(err);
+          });
       }
       return doc.data();
     })
@@ -50,14 +50,14 @@ exports.sendMessage = functions.firestore
   .document('users/{userID}/applicated_follows/{documentID}')
   .onCreate((change, context) => {
     console.log("STRAT:sendMessage");
-    console.log("to "+context.params.userID);
+    console.log("to " + context.params.userID);
     const payload = {
       notification: {
         title: "applicated_follow",
-        body:"フォロー申請されました！",
+        body: "フォロー申請されました！",
         badge: "1",
         sound: "default",
-        tag:"applicated_follow"
+        tag: "applicated_follow"
       }
     };
 
@@ -87,18 +87,19 @@ exports.myFunction = functions.firestore
     console.error("success!!");
 
     const mysql = require('mysql');
-    const connectionName ='snap-6cc78:asia-northeast1:snap';
-    const pool  = mysql.createPool({
-      connectionLimit : 30,
+    const secret = require('./secret');
+    const connectionName = secret.connectionName;
+    const pool = mysql.createPool({
+      connectionLimit: 30,
       socketPath: `/cloudsql/${connectionName}`,
-      user: "root",
-      password: "y3u736jA1416OubP",
+      user: secret.user,
+      password: secret.password,
       database: "SNap"
     });
-    const insert = "INSERT INTO posts(documentID,message) VALUES(?,?);"
+    const insert = "INSERT INTO posts(id,message) VALUES(?,?);"
 
-    pool.getConnection(function(err, connection){
-      if(err){
+    pool.getConnection(function (err, connection) {
+      if (err) {
         return console.log(err);
       }
       connection.query(`DELETE FROM posts`, (e, results) => {
@@ -110,8 +111,8 @@ exports.myFunction = functions.firestore
           let allPosts = postRef.get()
             .then(snapshot => {
               snapshot.forEach(doc => {
-                connection.query(insert,[doc.id,doc.data()["message"]],function(err, result, fields){
-          	       if (err) throw err;
+                connection.query(insert, [doc.id, doc.data()["message"]], function (err, result, fields) {
+                  if (err) throw err;
                 });
               });
               console.log("complete!!");
